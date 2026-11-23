@@ -1,7 +1,8 @@
 import type { TimelineId } from '../engine/types'
 import { isTodayTimeline, TIMELINE_OPTIONS } from '../data/timeline'
+import { About } from './About'
 
-/** Top bar: name, what is being simulated, the scenario picker and (once the data is ready) the sources. */
+/** Top bar: name, scenario picker, creator credits and (once the data is ready) sources. */
 export function Topbar({
   subtitle,
   timeline,
@@ -61,6 +62,7 @@ export function Topbar({
             <span className="short">Fuentes</span>
           </button>
         )}
+        <About />
       </div>
     </header>
   )

@@ -12,7 +12,7 @@ y las posibilidades de salir de los hogares que están en su camino.
 La idea es que las comunidades y quienes planifican la prevención puedan preguntarse "¿qué pasaría si…?"
 antes de tener que tomar esas decisiones en una emergencia.
 
-**[Abrir Cortafuego](https://cortafuego.app)** · Platanus Hack 26 · Categoría Simulaciones
+**[Abrir Cortafuego](https://cortafuego.app)** · Platanus Hack 26 · Finalista Categoría Simulaciones
 
 ## Qué puedes explorar
 
@@ -36,6 +36,23 @@ sirven como referencia para contrastar la simulación histórica.
 
 Las simulaciones se ejecutan en el navegador mediante un web worker. La aplicación está construida con
 React, TypeScript y MapLibre. Los datos se preparan previamente con un proceso en Python.
+
+## Ejecutar con Docker Compose
+
+Inicia Docker y, con el plugin de Compose instalado, ejecuta esto desde la raíz del repositorio:
+
+```sh
+docker compose up --build -d
+```
+
+Abre [http://localhost:8080](http://localhost:8080). Si el puerto está ocupado, usa
+`CORTAFUEGO_PORT=8081 docker compose up --build -d` y abre `http://localhost:8081`.
+
+La imagen incluye los datos de simulación del repositorio: no necesitas instalar Node ni Python en tu
+equipo ni regenerar los datos. El navegador necesita conexión a Internet para cargar el mapa base y
+consultar el pronóstico actual.
+
+Para detener la aplicación, ejecuta `docker compose down`.
 
 ## Equipo
 
