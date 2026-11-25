@@ -17,6 +17,7 @@ import {
   TIMELINE_OPTIONS,
   timelineDataset,
   TODAY_DEFS,
+  todayFireStartMin,
   VINA_2024_CHOICE,
   type TimelineChoice,
   type TodayTimelineId,
@@ -336,8 +337,9 @@ function Explorer({
   const t0 = data.grid.t0
   const horizon = data.horizonMin
   const [scenario, setScenario] = useState<Scenario>(() => defaultScenario(data))
-  // The clock opens at the default alert time (18:00), when the fire is well under way in the 2024 replay.
-  const [clock, setClock] = useState(() => Math.min(data.defaultAlertMin, data.horizonMin))
+  // The clock opens where the fire starts on the today timelines (12:05 on Viña, not hours before at 00:00 or late at
+  // the 18:00 alert); elsewhere at the default alert time, when the fire is well under way in the 2024 replay.
+  const [clock, setClock] = useState(() => todayFireStartMin(data, scenario) ?? Math.min(data.defaultAlertMin, data.horizonMin))
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(15)
   const [terrain3d, setTerrain3d] = useState(false)
@@ -468,7 +470,9 @@ function Explorer({
   const burnedHaNow = sorted ? countAtOrBefore(sorted, clock) * cellHa : 0
   // The grid is a hard boundary (src/engine/fire/edge.ts): say when the fire reaches it, never cut silently.
   const edge = useMemo(() => (fire ? edgeContact(data.grid.rows, data.grid.cols, fire.arrivalMin) : null), [fire, data])
-  useEffect(() => onNote('edge', edge ? edgeNote(edge, t0) : null), [edge, t0, onNote])
+  // The map note follows the clock, like the fire on the map: it appears once the fire reaches the edge. (The orange
+  // stretch on the outline, MapView, is drawn in 10-minute steps, so it can follow a few minutes later.)
+  const edgeText = edge ? edgeNote(edge, t0, clock) : null
   // Where people are, by time of day (src/engine/population): each burned cell counted at its arrival time.
   const wall0 = useMemo(() => wallClockMin(t0), [t0])
   const people = useMemo(
@@ -493,10 +497,11 @@ function Explorer({
   clockRef.current = clock
   useEffect(() => {
     if (!playing) return
-    // play from the start again once at the end
+    // play from the start again once at the end: on the today timelines from the first fire start, not from 00:00
     if (clockRef.current >= horizon) {
-      clockRef.current = 0
-      setClock(0)
+      const start = todayFireStartMin(data, scenarioRef.current) ?? 0
+      clockRef.current = start
+      setClock(start)
     }
     let last = performance.now()
     let raf = 0
@@ -515,7 +520,7 @@ function Explorer({
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [playing, speed, horizon])
+  }, [playing, speed, horizon, data])
 
   // ------------------------------------------------------------ tools
   useEffect(() => {
@@ -745,6 +750,11 @@ function Explorer({
                 {n}
               </div>
             ))}
+            {edgeText && (
+              <div className="map-note compact" role="status">
+                {edgeText}
+              </div>
+            )}
           </div>
           {!narrow && timebar}
         </div>

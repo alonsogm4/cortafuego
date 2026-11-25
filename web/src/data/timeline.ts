@@ -28,6 +28,21 @@ export const TODAY_DEFS: Record<TodayTimelineId, { point: ForecastPoint; presetI
   [TIMELINE.TODAY_TALCA]: { point: TALCA_FORECAST_POINT, presetIgnitions: false },
 }
 
+/** Where the clock starts on a today timeline: the earliest fire start of `s` (its enabled preset ignitions and the
+ *  ones added on the map), in minutes after t0. The today window opens at 00:00, hours before the fire (12:05 on
+ *  Viña), so the explorer opens its clock there, and plays again from there, instead of at the alert time (18:00)
+ *  or at 00:00. null on the other timelines, which keep opening at their alert time, after their fire start (Viña
+ *  12:05 / 18:00, Eaton 18:18 / 19:25, Talca 14:00 / 17:00), and when nothing burns inside the window (Talca today
+ *  starts blank; a start at 24:00 or later burns nothing). */
+export function todayFireStartMin(data: Dataset, s: { presetIgnitions: string[]; userIgnitions: { tMin: number }[] }): number | null {
+  if (!isTodayTimeline(data.timeline)) return null
+  const starts = [
+    ...data.ignitions.filter((g) => s.presetIgnitions.includes(g.id)).map((g) => localToMin(data.grid.t0, g.timeLocal)),
+    ...s.userIgnitions.map((u) => u.tMin),
+  ].filter((t) => t < data.horizonMin)
+  return starts.length === 0 ? null : Math.max(0, Math.min(...starts))
+}
+
 /** What the worker needs to rebuild the UI's view of the dataset (sent once, with init). */
 export type TimelineChoice =
   | { id: typeof TIMELINE.VINA_2024 }

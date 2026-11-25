@@ -9,9 +9,10 @@ const SIDES = [
   ['west', 'oeste'],
 ] as const
 
-/** Sides the fire reaches, earliest first, with the local time of the first contact on each. */
-export function edgeSides(edge: EdgeContact, t0: string): { side: string; when: string }[] {
-  return SIDES.filter(([k]) => Number.isFinite(edge[k]))
+/** Sides the fire reaches by `until` (minutes since t0; by the end when omitted), earliest first, with the local
+ *  time of the first contact on each. */
+export function edgeSides(edge: EdgeContact, t0: string, until = Infinity): { side: string; when: string }[] {
+  return SIDES.filter(([k]) => Number.isFinite(edge[k]) && edge[k] <= until)
     .sort((a, b) => edge[a[0]] - edge[b[0]])
     .map(([k, es]) => ({ side: es, when: localTime(t0, edge[k]) }))
 }
@@ -22,15 +23,16 @@ function localTime(t0: string, min: number): string {
   return day === minToDateLabel(t0, 0) ? minToHHMM(t0, min) : `${minToHHMM(t0, min)} del ${day}`
 }
 
-/** The map note, or null when the fire stays inside the simulated area. */
-export function edgeNote(edge: EdgeContact, t0: string): string | null {
-  const sides = edgeSides(edge, t0)
+/** The map note at `clock` (minutes since t0): the sides the fire has reached by then, or null before it reaches
+ *  any. What the numbers leave out is said under the final burned area (edgeStatNote). */
+export function edgeNote(edge: EdgeContact, t0: string, clock: number): string | null {
+  const sides = edgeSides(edge, t0, clock)
   if (sides.length === 0) return null
   const where =
     sides.length === 1
       ? `al borde ${sides[0].side} del área simulada a las ${sides[0].when}`
       : `a los bordes del área simulada: ${joinEs(sides.map((s) => `${s.side} a las ${s.when}`))}`
-  return `El fuego llega ${where}. Más allá no hay datos y el modelo no lo sigue: las cifras no incluyen lo que alcanzaría al otro lado.`
+  return `El fuego llega ${where}.`
 }
 
 /** The line under the final burned area, or null when the fire stays inside the simulated area. */

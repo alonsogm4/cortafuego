@@ -3,7 +3,7 @@ import { TIMELINE } from '../engine/types'
 import { ERA5_WIND_DIR_CORRECTION_DEG } from '../engine/fire/model'
 import { addDays, forecastUrl, offsetLabel, parseForecast, santiagoDate, TALCA_FORECAST_POINT, VINA_FORECAST_POINT, type Forecast } from './forecast'
 import { makeMockDataset } from './mock'
-import { isTimelineId, isTodayTimeline, timelineDataset, todayDataset } from './timeline'
+import { isTimelineId, isTodayTimeline, timelineDataset, todayDataset, todayFireStartMin } from './timeline'
 import { localToMin, minToDateLabel, minToHHMM } from './time'
 import { awayShare, dayKind } from '../engine/population'
 
@@ -177,6 +177,24 @@ describe('timelines', () => {
     expect(d.brigades.cuts[0].toLocal).toBe('2026-11-23T01:00')
     expect(d.brigades.cuts[0].label).toContain('2 feb 2024')
     for (const x of d.brigades.dispatch) expect(x.dispatchLocal.slice(0, 10)).toBe('2026-11-22')
+  })
+
+  it('today starts the clock at the first fire start, not at 00:00 or at the alert', () => {
+    const d = timelineDataset(base, { id: TIMELINE.TODAY, forecast })
+    const all = d.ignitions.map((g) => g.id)
+    // the mock ignitions are at 14:20 and 15:10
+    expect(todayFireStartMin(d, { presetIgnitions: all, userIgnitions: [] })).toBe(14 * 60 + 20)
+    // only the enabled ones count, and the ones added on the map
+    expect(todayFireStartMin(d, { presetIgnitions: [all[1]], userIgnitions: [] })).toBe(15 * 60 + 10)
+    expect(todayFireStartMin(d, { presetIgnitions: all, userIgnitions: [{ tMin: 8 * 60 }] })).toBe(8 * 60)
+    // nothing burns inside the window: no start (the explorer falls back to the alert time, or to 00:00 to replay)
+    expect(todayFireStartMin(d, { presetIgnitions: [], userIgnitions: [] })).toBeNull()
+    expect(todayFireStartMin(d, { presetIgnitions: [], userIgnitions: [{ tMin: d.horizonMin }] })).toBeNull()
+    // Talca today starts blank
+    const talca = timelineDataset({ ...base, timeline: TIMELINE.TALCA }, { id: TIMELINE.TODAY_TALCA, forecast })
+    expect(todayFireStartMin(talca, { presetIgnitions: [], userIgnitions: [] })).toBeNull()
+    // the historical timelines keep opening at their alert time
+    expect(todayFireStartMin(base, { presetIgnitions: base.ignitions.map((g) => g.id), userIgnitions: [] })).toBeNull()
   })
 
   it('refuses to derive a timeline from a derived dataset', () => {
